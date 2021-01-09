@@ -17,9 +17,11 @@ from torchvision import transforms, utils
 from dataloader_vcoco import Rescale, ToTensor, vcoco_Dataset, vcoco_collate
 from train_test import train_test
 import model as rr
+import model_hoigcn as ours
 import random
 import pdb
 from train_test_hoigcn import train_test_hoigcn
+from train_test_tmp import train_test_tmp
 
 device = torch.device("cuda")
 
@@ -111,7 +113,8 @@ dataloader = {'train': dataloader_train, 'val': dataloader_val, 'test': dataload
 folder_name = '../{}'.format(first_word)
 
 ### Loading Model ###
-res = rr.VSGNet()
+#res = rr.VSGNet()
+res = ours.VSGNet()
 ############################
 
 
@@ -164,8 +167,8 @@ if hyp == 't':
     except:
         print('Failed to load previous Hyperparameters')
 
-train_test(res, optim1, scheduler, dataloader, number_of_epochs, breaking_point, saving_epoch, folder_name, batch_size,
-            infr, epoch, mean_best, visualize)
-
-# train_test_hoigcn(res, optim1, scheduler, dataloader, number_of_epochs, breaking_point, saving_epoch, folder_name, batch_size,
+# train_test(res, optim1, scheduler, dataloader, number_of_epochs, breaking_point, saving_epoch, folder_name, batch_size,
 #            infr, epoch, mean_best, visualize)
+
+train_test_tmp(res, optim1, scheduler, dataloader, number_of_epochs, breaking_point, saving_epoch, folder_name, batch_size,
+           infr, epoch, mean_best, visualize)

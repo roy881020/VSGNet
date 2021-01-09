@@ -134,7 +134,7 @@ def LIS(x, T, k, w):
 #####################################################################################################
 
 
-def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_point, saving_epoch, folder_name,
+def train_test_hoigcn(model, optimizer, scheduler, dataloader, number_of_epochs, break_point, saving_epoch, folder_name,
                batch_size, infr, start_epoch, mean_best, visualize):
     #### Creating the folder where the results would be stored##########
 
@@ -216,6 +216,8 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                 image_id = i[3]
                 pairs_info = i[4]
                 #print("what the pairs_info???", i[3])
+                # import pdb
+                # pdb.set_trace()
                 for iter in range(len(i[3])):
                     if i[3][iter] == 3770:
                         #pdb.set_trace()
@@ -243,7 +245,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                     outputs_combine = model_out[2]
                     outputs_gem = model_out[3]
                     # outputs_pose=model_out[7]
-
 
 
                     predicted_HOI = sigmoid(outputs).data.cpu().numpy()
@@ -283,7 +284,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                                                                                           scores_total['objects_bbx'], \
                                                                                           scores_total[
                                                                                               'class_id_objects']
-
                         temp_scores = extend(np.array(persons_score).reshape(len(persons_score), 1),
                                              int(pairs_info[batch][1]))
                         persons_score_extended = np.concatenate([persons_score_extended, temp_scores])
@@ -313,18 +313,19 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                     predicted_HOI = predicted_HOI * predicted_HOI_combine * predicted_single * predicted_gem * objects_score_extended[
                                                                                                                1:] * persons_score_extended[
                                                                                                                      1:]
-                    loss_mask = prior.apply_prior(class_ids_extended[1:], predicted_HOI)
-                    predicted_HOI = loss_mask * predicted_HOI
+                    # loss_mask = prior.apply_prior(class_ids_extended[1:], predicted_HOI)
+                    # predicted_HOI = loss_mask * predicted_HOI
 
                     #### Calculating Loss############
                     N_b = minbatch_size * 29  # *int(total_elements[0])#*29 #pairs_info[1]*pairs_info[2]*pairs_info[3]
                     hum_obj_mask = torch.Tensor(
-                        objects_score_extended[1:] * persons_score_extended[1:] * loss_mask).cuda()
+                        objects_score_extended[1:] * persons_score_extended[1:]).cuda()
                     lossf = torch.sum(loss_com_combine(
                         sigmoid(outputs) * sigmoid(outputs_combine) * sigmoid(outputs_single) * hum_obj_mask * sigmoid(
                             outputs_gem), labels.float())) / N_b
 
-
+                    # import pdb;
+                    # pdb.set_trace()
                     lossc = lossf.item()
 
                     acc_epoch += lossc

@@ -61,37 +61,6 @@ def get_pool_loc(ims, image_id, flag_, size=(7, 7), spatial_scale=1, batch_size=
     # import pdb;pdb.set_trace()
     return torch.stack(pers_out), torch.stack(objs_out), spatial_locs, torch.cat(union_box_out)
 
-def get_node_feature(person, object,context, pairs_info):
-
-    out_node_features = []
-    node_concat_person_object_context = []
-    start_person = 0
-    start_object = 0
-    for batch in range(len(pairs_info)):
-        number_of_person = int(pairs_info[batch][0])
-        number_of_object = int(pairs_info[batch][1])
-        length_of_this_batch = int(pairs_info[batch][0] + pairs_info[batch][1])
-        batch_person, batch_object = person[start_person : start_person + number_of_person], object[start_object : start_object + number_of_object]
-        batch_context = context[batch]
-        batch_context = batch_context.unsqueeze(0)
-
-        for index_person, peron_in_batch in enumerate(batch_person):
-            for index_object, object_in_batch in enumerate(batch_object):
-                person_object_flat = torch.cat([peron_in_batch.unsqueeze(0), object_in_batch.unsqueeze(0)], dim=1) #(1, 2048)
-                person_object_context_flat = torch.cat([person_object_flat, batch_context], dim=1) #(1,3072)
-                node_concat_person_object_context.append(person_object_context_flat) # list of features
-
-        out_node_features = torch.stack(node_concat_person_object_context)
-
-        start_person += number_of_person
-        start_object += number_of_object
-
-    out_node_features = out_node_features.squeeze()
-
-    return out_node_features
-
-
-
 
 def extract_spatial(hum_box, obj_box):
     x1h, y1h, x2h, y2h, wh, hh = float(hum_box[0]), float(hum_box[1]), float(hum_box[2]), float(hum_box[3]), float(
