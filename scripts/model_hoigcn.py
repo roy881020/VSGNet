@@ -164,28 +164,40 @@ class VSGNet(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-        self.learnable_matrix = nn.Sequential(
-            nn.Linear(lin_size * 3, 1024),
-            nn.Linear(1024, 29),
-            nn.ReLU(),
-        )
+
         self.learnable_conv = nn.Sequential(
-            nn.Conv1d(3072, 576, kernel_size=(1, 1), stride=(1, 1), bias=False),
-            nn.BatchNorm1d(576, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-            nn.Conv1d(576, 3072, kernel_size=(1, 1), stride=(1, 1), bias=False),
-            nn.BatchNorm1d(3072, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.Conv1d(3072, 1024, kernel_size=1, stride=1),
+            nn.BatchNorm1d(1024),
+            nn.Conv1d(1024, 512, kernel_size=1, stride=1),
+            nn.BatchNorm1d(512),
+            nn.Conv1d(512,1024,kernel_size=1, stride=1),
+            nn.BatchNorm1d(1024),
+            nn.Conv1d(1024,3072,kernel_size=1, stride=1),
+            nn.BatchNorm1d(3072),
             nn.ReLU(inplace=False),
-        )
-        self.learnable_conv_matrix = nn.Sequential(
-            nn.Linear(lin_size * 3, 1024),
-            nn.Linear(1024, 29),
-            nn.ReLU(),
         )
         self.learnable_single = nn.Sequential(
             nn.Linear(lin_size * 3, 1024),
             nn.Linear(1024, 512),
-            nn.Linear(512, 1),
+            nn.Linear(512, 128),
+            nn.Linear(128, 1),
             nn.ReLU(),
+        )
+        self.learnable_matrix = nn.Sequential(
+            nn.Linear(lin_size * 3, 1024),
+            nn.Linear(1024, 512),
+            nn.Linear(512, 128),
+            nn.Linear(128, 29),
+            nn.ReLU(),
+        )
+        self.interaction_prob_matrix = nn.Sequential(
+            nn.Linear(lin_size * 3, 1024),
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+        )
+        self.interaction_prob_value = nn.Sequential(
+            nn.Linear(512, 128),
+            nn.Linear(128,29),
         )
 
     def forward(self, x, pairs_info, pairs_info_augmented, image_id, flag_, phase):
@@ -223,11 +235,25 @@ class VSGNet(nn.Module):
         out2_context = self.flat(res_av_context)
         #################
 
-        node_feature = ROI.get_node_feature(out2_people, out2_objects, out2_context, pairs_info)
+        ##Attention Features##
+        out2_union = self.spmap_up(self.flat(self.conv_sp_map(union_box)))
+        ############################
+
+        node_feature_cat = ROI.get_node_feature(out2_people, out2_objects, out2_context, pairs_info)
+        node_feature = node_feature_cat.reshape(node_feature_cat.size()[0], node_feature_cat.size()[1], 1)
+        node_feature = self.learnable_conv(node_feature)
+        node_feature = node_feature.reshape(node_feature.size()[0], node_feature.size()[1])
+
         test = self.learnable_matrix(node_feature)
         # test2 = self.learnable_conv(node_feature.unsqueeze(2).unsqueeze(2))
         # test2 = self.learnable_conv_matrix(test2)
         test2 = self.learnable_single(node_feature)
+
+        ###Interaction Prob
+        interaction_feature = self.interaction_prob_matrix(node_feature_cat)
+        interaction_prob = interaction_feature * out2_union
+        interaction_score = self.interaction_prob_value(interaction_prob)
+        interaction_score = self.sigmoid(interaction_score)
 
 
 
@@ -349,4 +375,4 @@ class VSGNet(nn.Module):
         # #############################
         # #import pdb; pdb.set_trace()
 
-        return [test, test2] # ,lin_obj_ids]
+        return [test, test2, interaction_score] # ,lin_obj_ids]

@@ -242,12 +242,15 @@ def train_test_tmp(model, optimizer, scheduler, dataloader, number_of_epochs, br
                     model_out = model(inputs, pairs_info, pairs_info, image_id, nav, phase)
                     outputs = model_out[0]
                     outputs_single = model_out[1]
+                    outputs_interaction_score = model_out[2]
+
                     # outputs_pose=model_out[7]
 
 
                     predicted_HOI = sigmoid(outputs).data.cpu().numpy()
                     predicted_single = sigmoid(outputs_single).data.cpu().numpy()
                     predicted_HOI_pair = predicted_HOI
+                    predicted_interaction_score = outputs_interaction_score.data.cpu().numpy()
                     # predicted_HOI_pose=sigmoid(outputs_pose).data.cpu().numpy()
 
                     start_index = 0
@@ -306,9 +309,7 @@ def train_test_tmp(model, optimizer, scheduler, dataloader, number_of_epochs, br
                     ##################################
 
                     ##### Multiplying the score from different streams along with the prior function from ican##########
-                    predicted_HOI = predicted_HOI  * predicted_single  * objects_score_extended[
-                                                                                                               1:] * persons_score_extended[
-                                                                                                                     1:]
+                    predicted_HOI = predicted_HOI  * predicted_single  * objects_score_extended[1:] * persons_score_extended[1:] * predicted_interaction_score
                     loss_mask = prior.apply_prior(class_ids_extended[1:], predicted_HOI)
                     predicted_HOI = loss_mask * predicted_HOI
 
@@ -317,7 +318,7 @@ def train_test_tmp(model, optimizer, scheduler, dataloader, number_of_epochs, br
                     hum_obj_mask = torch.Tensor(
                         objects_score_extended[1:] * persons_score_extended[1:] * loss_mask).cuda()
                     lossf = torch.sum(loss_com_combine(
-                        sigmoid(outputs)  * sigmoid(outputs_single) * hum_obj_mask , labels.float())) / N_b
+                        sigmoid(outputs)  * sigmoid(outputs_single) * hum_obj_mask  * sigmoid(outputs_interaction_score), labels.float())) / N_b
                     #210104 delete prior loss_mask in lossf
 
                     # import pdb;

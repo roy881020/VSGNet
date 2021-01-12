@@ -75,9 +75,9 @@ def get_node_feature(person, object,context, pairs_info):
         batch_context = context[batch]
         batch_context = batch_context.unsqueeze(0)
 
-        for index_person, peron_in_batch in enumerate(batch_person):
+        for index_person, person_in_batch in enumerate(batch_person):
             for index_object, object_in_batch in enumerate(batch_object):
-                person_object_flat = torch.cat([peron_in_batch.unsqueeze(0), object_in_batch.unsqueeze(0)], dim=1) #(1, 2048)
+                person_object_flat = torch.cat([person_in_batch.unsqueeze(0), object_in_batch.unsqueeze(0)], dim=1) #(1, 2048)
                 person_object_context_flat = torch.cat([person_object_flat, batch_context], dim=1) #(1,3072)
                 node_concat_person_object_context.append(person_object_context_flat) # list of features
 

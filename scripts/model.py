@@ -130,7 +130,7 @@ class VSGNet(nn.Module):
         self.lin_visual_head = nn.Sequential(
             # nn.Linear(2048, 29),
             # nn.Dropout2d(p=0.5),
-            nn.Linear(lin_size * 3 + 4, 1024),
+            nn.Linear(lin_size * 3 + 4, 1024), # in ROI.pairing, extract_spatial function return size 4 of features
             # nn.Linear(lin_size*3, 1024),
             # nn.Linear(lin_size*3+4+sp_size, 1024),
             nn.Linear(1024, 512),
@@ -209,6 +209,7 @@ class VSGNet(nn.Module):
         #### Making Essential Pairing##########
         pairs, people, objects_only = ROI.pairing(out2_people, out2_objects, out2_context, spatial_locs, pairs_info)
         ####################################
+        import pdb; pdb.set_trace()
 
         ###### Interaction Probability##########
         lin_single_h = self.lin_single_head(pairs)
