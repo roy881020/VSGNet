@@ -209,7 +209,6 @@ class VSGNet(nn.Module):
         #### Making Essential Pairing##########
         pairs, people, objects_only = ROI.pairing(out2_people, out2_objects, out2_context, spatial_locs, pairs_info)
         ####################################
-        import pdb; pdb.set_trace()
 
         ###### Interaction Probability##########
         lin_single_h = self.lin_single_head(pairs)

@@ -19,3 +19,6 @@ if __name__ == '__main__':
     for k in range(80):
         prediction_HOI = np.ones((1, 29))
         res[k] = apply_prior([k], prediction_HOI)
+
+
+

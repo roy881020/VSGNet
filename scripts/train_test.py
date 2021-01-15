@@ -314,6 +314,7 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                                                                                                                1:] * persons_score_extended[
                                                                                                                      1:]
                     loss_mask = prior.apply_prior(class_ids_extended[1:], predicted_HOI)
+                    pdb.set_trace()
                     predicted_HOI = loss_mask * predicted_HOI
 
                     #### Calculating Loss############
