@@ -200,6 +200,11 @@ class VSGNet(nn.Module):
             nn.Linear(128,29),
         )
 
+        self.test_spatial_to_node_feature = nn.Sequential(
+            nn.Linear(3076,3072),
+            nn.ReLU()
+        )
+
     def forward(self, x, pairs_info, pairs_info_augmented, image_id, flag_, phase):
         out1 = self.Conv_pretrain(x)  ### out1_shape(1, 1024, 25, 25) -> (batch, channel, width, height) from (1, 3, 400, 400)
 
@@ -239,10 +244,21 @@ class VSGNet(nn.Module):
         out2_union = self.spmap_up(self.flat(self.conv_sp_map(union_box)))
         ############################
 
+
+
+        pairs, people, objects_only = ROI.pairing(out2_people, out2_objects, out2_context, spatial_locs, pairs_info)
+
+        pairs = self.test_spatial_to_node_feature(pairs)
+
         node_feature_cat = ROI.get_node_feature(out2_people, out2_objects, out2_context, pairs_info)
         node_feature = node_feature_cat.reshape(node_feature_cat.size()[0], node_feature_cat.size()[1], 1)
         node_feature = self.learnable_conv(node_feature)
         node_feature = node_feature.reshape(node_feature.size()[0], node_feature.size()[1])
+
+        ###210121 test spatial_locs feature into node_feature by ADD
+        ##after this test, have to test by MUL
+        #import pdb; pdb.set_trace()
+        node_feature = node_feature * pairs
 
         test = self.learnable_matrix(node_feature)
         # test2 = self.learnable_conv(node_feature.unsqueeze(2).unsqueeze(2))

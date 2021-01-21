@@ -155,8 +155,8 @@ def get_node_feature(person, object, context, pairs_info):
     return out_node_features
 
 
-def get_adj_mtx(person, object, pairs_info):
-    with open('../infos/prior.pickle', 'rb') as fp: priors = pickle.load(fp, encoding='bytes')
-
-    for batch in enumerate(len(pairs_info)):
-
+# def get_adj_mtx(person, object, pairs_info):
+#     with open('../infos/prior.pickle', 'rb') as fp: priors = pickle.load(fp, encoding='bytes')
+#
+#     for batch in enumerate(len(pairs_info)):
+#
