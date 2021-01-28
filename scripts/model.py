@@ -172,6 +172,8 @@ class VSGNet(nn.Module):
                                                                               batch_size=len(pairs_info))
         #spatial_locs -> objects(persons~, objects~) [x1, y1, x2, y2, x2-x1, y2-y1] , scale 0~1
 
+        import pdb; pdb.set_trace()
+
         ### Defining The Pooling Operations #######
         x, y = out1.size()[2], out1.size()[3]
         hum_pool = nn.AvgPool2d(pool_size, padding=0, stride=(1, 1))
@@ -209,6 +211,7 @@ class VSGNet(nn.Module):
         #### Making Essential Pairing##########
         pairs, people, objects_only = ROI.pairing(out2_people, out2_objects, out2_context, spatial_locs, pairs_info)
         ####################################
+        pdb.set_trace()
 
         ###### Interaction Probability##########
         lin_single_h = self.lin_single_head(pairs)
@@ -263,8 +266,8 @@ class VSGNet(nn.Module):
 
                 adj_po = torch.cat(adj_l).view(len(adj_l), 1)
                 adj_op = adj_po
-                # import pdb
-                # pdb.set_trace()
+                import pdb
+                pdb.set_trace()
                 ##############################
 
                 ###Finding Out Refined Features######
