@@ -19,7 +19,7 @@ for i in range(len(os.listdir(IMG_PATH_train))):
 
     cv2.imwrite(TARGET_PATH_train + os.listdir(IMG_PATH_train)[i], quattro_img)
 
-    print('%d img saved'.format(os.listdir(IMG_PATH_train)[i]))
+    print('{} img saved'.format(os.listdir(IMG_PATH_train)[i]))
 
 
 
