@@ -6,7 +6,7 @@ import cv2
 
 with open('../infos/directory.json') as fp: all_data_dir = json.load(fp)
 
-ANN_FILE_train = all_data_dir + 'Annotations_hico/train_annotations.json'
+ANN_FILE_train = all_data_dir + 'Annotations_hico/train_annotations_quattro.json'
 ANN_FILE_test = all_data_dir + 'Annotations_hico/test_annotations.json'
 with open(ANN_FILE_train) as fp:
     ANNOTATIONS_train = json.load(fp)

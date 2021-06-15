@@ -77,7 +77,8 @@ check = args.Check_point
 with open('../infos/directory.json') as fp: all_data_dir = json.load(fp)
 
 annotation_train = all_data_dir + 'Annotations_hico/train_annotations_quattro.json'
-image_dir_train = '/home/roy/projects/quattro/data/train/'
+#image_dir_train = '/home/roy/projects/quattro/data/train/'
+image_dir_train = all_data_dir + 'Data_hico/train2015/'
 
 annotation_test = all_data_dir + 'Annotations_hico/test_annotations.json'
 image_dir_test = all_data_dir + 'Data_hico/test2015/'
