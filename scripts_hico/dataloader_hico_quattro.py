@@ -85,7 +85,7 @@ class hico_Dataset(Dataset):
         if self.flag == 'test':
             img_pre_suffix = 'HICO_test2015_' + str(self.hico_frame[idx]).zfill(8) + '.jpg'
         else:
-            img_pre_suffix = 'HICO_train2015_quattro_' + str(self.hico_frame[idx]).zfill(8) + '.jpg'
+            img_pre_suffix = 'HICO_train2015_' + str(self.hico_frame[idx]).zfill(8) + '.jpg'
         all_labels = labels.get_compact_label(int(self.hico_frame[idx]), self.flag)
         labels_all = all_labels['labels_all']
         labels_single = all_labels['labels_single']
