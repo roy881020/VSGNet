@@ -11,8 +11,8 @@ IMG_PATH_train = all_data_dir + 'Data_hico/train2015_origin/'
 TARGET_PATH_train = all_data_dir + 'Data_hico/train2015/'
 
 for i in range(len(os.listdir(IMG_PATH_train))):
-    with open(IMG_PATH_train + os.listdir(IMG_PATH_train)[i]) as fp:
-        img = cv2.imread(fp)
+
+    img = cv2.imread(IMG_PATH_train + os.listdir(IMG_PATH_train)[i])
 
     quattro_img = cv2.vconcat([img, img])
     quattro_img = cv2.hconcat([quattro_img, quattro_img])
