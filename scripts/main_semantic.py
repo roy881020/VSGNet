@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 import torch.optim as optim
 import sys
 import warnings
@@ -13,10 +14,13 @@ warnings.filterwarnings("ignore")
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-from dataloader_hico import Rescale, ToTensor, hico_Dataset, hico_collate
-from train_test import train_test
+from dataloader_semantic import Rescale, ToTensor, vcoco_Dataset, vcoco_collate
+from train_test_semantic import train_test
 import model as rr
+import model_semantic as ms
 import random
+import pdb
+from train_test_hoigcn import train_test_hoigcn
 
 device = torch.device("cuda")
 
@@ -50,7 +54,7 @@ parser.add_argument('-ba', '--batch_size', type=int, required=False, default=1, 
 parser.add_argument('-r', '--resume_model', type=str, required=False, default='f',
                     help='If this flag is t then a pretrained model will be loaded')
 parser.add_argument('-i', '--inference', type=str, required=False, default='f',
-                    help='If this flag is t then the model will run only on test set to store result on hico format')
+                    help='If this flag is t then the model will run only on test set to store result on vcoco format')
 parser.add_argument('-h_l', '--hyper_load', type=str, required=False, default='f',
                     help='If this flag is t then the model will load stored hyper parameters')
 parser.add_argument('-v_i', '--Visualize', type=str, required=False, default='f',
@@ -76,30 +80,40 @@ check = args.Check_point
 
 with open('../infos/directory.json') as fp: all_data_dir = json.load(fp)
 
-annotation_train = all_data_dir + 'Annotations_hico/train_annotations.json'
-image_dir_train = all_data_dir + 'Data_hico/train2015/'
+annotation_train = all_data_dir + 'Annotations_vcoco/train_annotations.json'
+image_dir_train = all_data_dir + 'Data_vcoco/train2014/'
 
-annotation_test = all_data_dir + 'Annotations_hico/test_annotations.json'
-image_dir_test = all_data_dir + 'Data_hico/test2015/'
+annotation_val = all_data_dir + 'Annotations_vcoco/val_annotations.json'
+image_dir_val = all_data_dir + 'Data_vcoco/train2014/'
 
-hico_train = hico_Dataset(annotation_train, image_dir_train,
+annotation_test = all_data_dir + 'Annotations_vcoco/test_annotations.json'
+image_dir_test = all_data_dir + 'Data_vcoco/val2014/'
+#image_dir_test = all_data_dir + 'test/'
+
+vcoco_train = vcoco_Dataset(annotation_train, image_dir_train,
+                            transform=transforms.Compose([Rescale((400, 400)), ToTensor()]))
+vcoco_val = vcoco_Dataset(annotation_val, image_dir_val,
                           transform=transforms.Compose([Rescale((400, 400)), ToTensor()]))
-hico_test = hico_Dataset(annotation_test, image_dir_test,
-                         transform=transforms.Compose([Rescale((400, 400)), ToTensor()]))
+vcoco_test = vcoco_Dataset(annotation_test, image_dir_test,
+                           transform=transforms.Compose([Rescale((400, 400)), ToTensor()]))
 
-# import pdb;pdb.set_trace()
-dataloader_train = DataLoader(hico_train, batch_size,
-                              shuffle=True, collate_fn=hico_collate, num_workers=24,
+dataloader_train = DataLoader(vcoco_train, batch_size,
+                              shuffle=True, collate_fn=vcoco_collate,num_workers=0,
                               worker_init_fn=_init_fn)  # num_workers=batch_size
-dataloader_test = DataLoader(hico_test, batch_size,
-                             shuffle=False, collate_fn=hico_collate, num_workers=24,
-                             worker_init_fn=_init_fn)  # num_workers=batch_size
-dataloader = {'train': dataloader_train, 'test': dataloader_test}
+dataloader_val = DataLoader(vcoco_val, batch_size,
+                            shuffle=True, collate_fn=vcoco_collate,num_workers=0,
+                            worker_init_fn=_init_fn)  # num_workers=batch_size
+dataloader_test = DataLoader(vcoco_test, batch_size,
+                             shuffle=False, collate_fn=vcoco_collate,num_workers=0,
+                             worker_init_fn=_init_fn)  # num_workers=batch_size -> before 4
+dataloader = {'train': dataloader_train, 'val': dataloader_val, 'test': dataloader_test}
+
 
 folder_name = '../{}'.format(first_word)
 
 ### Loading Model ###
 res = rr.VSGNet()
+res = ms.Semantic()
 ############################
 
 
@@ -115,14 +129,14 @@ for name, p in res.named_parameters():
         if name.split('.')[0] == 'conv_sp_map' or name.split('.')[0] == 'spmap_up':
             spmap.append(p)
         else:
-
             trainables.append(p)
+
+#pdb.set_trace()
 
 optim1 = optim.SGD([{"params": trainables, "lr": learning_rate},
                     {"params": spmap, "lr": 0.001}],
                    momentum=0.9, weight_decay=0.0001)
-# lambda1 = lambda epoch: 1.0 if epoch < 10 else (10 if epoch < 28 else 1)
-lambda1 = lambda epoch: 1.0 if epoch < 10 else (0.1 if epoch < 28 else 1)
+lambda1 = lambda epoch: 1.0 if epoch < 10 else (10 if epoch < 28 else 1)
 lambda2 = lambda epoch: 1
 lambda3 = lambda epoch: 1
 scheduler = optim.lr_scheduler.LambdaLR(optim1, [lambda1, lambda2])
@@ -153,4 +167,7 @@ if hyp == 't':
         print('Failed to load previous Hyperparameters')
 
 train_test(res, optim1, scheduler, dataloader, number_of_epochs, breaking_point, saving_epoch, folder_name, batch_size,
-           infr, epoch, mean_best, visualize)
+            infr, epoch, mean_best, visualize)
+
+# train_test_hoigcn(res, optim1, scheduler, dataloader, number_of_epochs, breaking_point, saving_epoch, folder_name, batch_size,
+#            infr, epoch, mean_best, visualize)

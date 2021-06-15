@@ -425,7 +425,8 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
         print('APs in EPOCH:{}'.format(epoch + 1))
         print(AP_final)
         print(AP_final_single)
-        #post_test.send_message_to_slack_baseline(AP_final)
+        #post_test.send_message_to_slack(AP_final)
+        #post_test.send_message_to_slack(AP_final_single)
         try:
             print('Loss_train:{},Loss_test:{}'.format(loss_epoch_train[epoch - start_epoch],
                                                       loss_epoch_test[epoch - start_epoch]))

@@ -30,8 +30,6 @@ def get_pool_loc(ims, image_id, flag_, size=(7, 7), spatial_scale=1, batch_size=
             flag = 'test'
 
         a = helpers_pre.get_compact_detections(this_image, flag)
-        # import pdb;
-        # pdb.set_trace()
         roi_pers, roi_objs = a['person_bbx'], a['objects_bbx']
         union_box = helpers_pre.get_attention_maps(this_image, flag)
         union_box_out.append(torch.tensor(union_box).cuda().float())

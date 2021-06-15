@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 from random import randint
 import cv2
+import torch
 
 with open('../infos/directory.json') as fp: all_data_dir = json.load(fp)
 
@@ -52,7 +53,23 @@ VERB2ID = {u'carry': 0,
 
 MATCHING_IOU = .5
 NO_VERBS = 29
+NO_OBJECT = 80
 
+def get_object_list(segment_key, flag):
+
+    total_object_list = []
+
+    for batch in range(segment_key.size()[0]):
+        object_list = np.zeros((NO_OBJECT), dtype=int)
+        d_p_boxes, d_o_boxes, scores_persons, scores_objects, class_id_humans, class_id_objects, annotation, shape = get_detections(int(segment_key[batch]), flag)
+        for human_idx in range(len(class_id_humans)):
+            object_list[class_id_humans[human_idx] -1] = 1
+        for object_idx in range(len(class_id_objects)):
+            object_list[class_id_objects[object_idx] - 1] = 1
+        total_object_list.append(torch.tensor(object_list))
+
+
+    return torch.stack(total_object_list)
 
 def get_detections(segment_key, flag):
     if flag == 'train':
@@ -122,6 +139,74 @@ def get_compact_detections(segment_key, flag):
             'person_bbx_score': scores_persons, 'objects_bbx_score': scores_objects,
             'class_id_objects': class_id_objects}
 
+# def get_semantic_label(segment_key, flag):
+#     d_p_boxes, d_o_boxes, scores_persons, scores_objects, class_id_humans, class_id_objects, annotation, shape = get_detections(
+#         segment_key, flag)
+#
+#     action_labels = np.zeros((1,NO_VERBS), np.int32)
+#
+#     no_person_dets = len(d_p_boxes)
+#     no_object_dets = len(d_o_boxes)
+#     labels_np = np.zeros([no_person_dets, no_object_dets + 1, NO_VERBS], np.int32)
+#
+#     a_p_boxes = [ann['person_box'] for ann in annotation]
+#     iou_mtx = get_iou_mtx(a_p_boxes, d_p_boxes)
+#     # import pdb;pdb.set_trace()
+#
+#     if no_person_dets != 0 and len(a_p_boxes) != 0:
+#         max_iou_for_each_det = np.max(iou_mtx, axis=0)
+#         index_for_each_det = np.argmax(iou_mtx, axis=0)
+#         for dd in range(no_person_dets):
+#             cur_max_iou = max_iou_for_each_det[dd]
+#             if cur_max_iou < MATCHING_IOU:
+#                 continue
+#             matched_ann = annotation[index_for_each_det[dd]]
+#             hoi_anns = matched_ann['hois']
+#             # Verbs with no actions####
+#             noobject_hois = [oi for oi in hoi_anns if len(oi['obj_box']) == 0]
+#
+#             for no_hoi in noobject_hois:
+#                 verb_idx = VERB2ID[no_hoi['verb']]
+#                 labels_np[dd, 0, verb_idx] = 1
+#
+#             # verbs with actions######
+#             object_hois = [oi for oi in hoi_anns if len(oi['obj_box']) != 0]
+#
+#             a_o_boxes = [oi['obj_box'] for oi in object_hois]
+#             iou_mtx_o = get_iou_mtx(a_o_boxes, d_o_boxes)
+#
+#             if a_o_boxes and d_o_boxes:
+#                 for do in range(len(d_o_boxes)):
+#                     for ao in range(len(a_o_boxes)):
+#                         cur_iou = iou_mtx_o[ao, do]
+#                         # enough iou
+#                         if cur_iou < MATCHING_IOU:
+#                             continue
+#                         current_hoi = object_hois[ao]
+#                         verb_idx = VERB2ID[current_hoi['verb']]
+#                         labels_np[dd, do + 1, verb_idx] = 1  # +1 because 0 is no object
+#         comp_labels = labels_np.reshape(no_person_dets * (no_object_dets + 1), NO_VERBS)
+#         tmp_labels = np.transpose(comp_labels)
+#         action_labels = np.array([1 if i.any() == True else 0 for i in tmp_labels])
+#
+#         return action_labels
+
+def get_semantic_label(segment_key, flag):
+    d_p_boxes, d_o_boxes, scores_persons, scores_objects, class_id_humans, class_id_objects, annotation, shape = get_detections(
+        segment_key, flag)
+
+    action_labels = np.zeros((NO_VERBS), np.int32)
+
+    no_person_dets = len(d_p_boxes)
+    no_object_dets = len(d_o_boxes)
+    labels_np = np.zeros([no_person_dets, no_object_dets + 1, NO_VERBS], np.int32)
+
+    for ann_idx in range(len(annotation)):
+        for verb_idx in range(len(annotation[ann_idx]['hois'])):
+            action_number = VERB2ID[annotation[ann_idx]['hois'][verb_idx]['verb']]
+            action_labels[action_number] = 1
+
+    return action_labels
 
 def get_attention_maps(segment_key, flag):
     compact_detections = get_compact_detections(segment_key, flag)
@@ -185,7 +270,6 @@ def get_compact_label(segment_key, flag): #segment_key : image_id(e.g. 319492), 
         comp_labels = labels_np.reshape(no_person_dets * (no_object_dets + 1), NO_VERBS)
         labels_single = np.array([1 if i.any() == True else 0 for i in comp_labels])
         labels_single = labels_single.reshape(np.shape(labels_single)[0], 1)
-        #pdb.set_trace()
         return {'labels_all': labels_np, 'labels_single': labels_single}
     else:
         comp_labels = labels_np.reshape(no_person_dets * (no_object_dets + 1), NO_VERBS)

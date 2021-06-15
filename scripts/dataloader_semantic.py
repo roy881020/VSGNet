@@ -17,23 +17,14 @@ NO_VERB = 29
 
 
 def vcoco_collate(batch):
-    image = []
     image_id = []
-    pairs_info = []
-    labels_all = []
-    labels_single = []
+    action_label = []
     for index, item in enumerate(batch):
-        image.append(item['image'])
         image_id.append(torch.tensor(int(item['image_id'])))
-        pairs_info.append(torch.tensor(np.shape(item['labels_all'])))
-        tot_HOI = int(np.shape(item['labels_single'])[0])
-        labels_all.append(torch.tensor(item['labels_all'].reshape(tot_HOI, NO_VERB)))
-        labels_single.append(torch.tensor(item['labels_single']))
-        # import pdb
-        # pdb.set_trace()
 
-    return [torch.stack(image), torch.cat(labels_all), torch.cat(labels_single), torch.stack(image_id),
-            torch.stack(pairs_info)]
+        action_label.append(torch.tensor(item['action_label']))
+
+    return [torch.stack(image_id), torch.stack(action_label)]
 
 
 class Rescale(object):
@@ -87,22 +78,8 @@ class vcoco_Dataset(Dataset):
         return len(self.vcoco_frame)
 
     def __getitem__(self, idx):
-        if self.flag == 'test':
-            img_pre_suffix = 'COCO_val2014_' + str(self.vcoco_frame[idx]).zfill(12) + '.jpg'
-        else:
-            img_pre_suffix = 'COCO_train2014_' + str(self.vcoco_frame[idx]).zfill(12) + '.jpg'
-        all_labels = labels.get_compact_label(int(self.vcoco_frame[idx]), self.flag)
-        labels_all = all_labels['labels_all']
-        #import pdb; pdb.set_trace()
-        labels_single = all_labels['labels_single']
 
-        img_name = os.path.join(self.root_dir, img_pre_suffix)
-        ids = [int(self.vcoco_frame[idx]), self.flag]
-        image = Image.open(img_name).convert('RGB')
-        image = np.array(image)
+        action_labels = labels.get_semantic_label(int(self.vcoco_frame[idx]), self.flag)
 
-        if self.transform:
-            image = self.transform(image)
-        sample = {'image': image, 'labels_all': labels_all, 'labels_single': labels_single,
-                  'image_id': self.vcoco_frame[idx]}
+        sample = {'image_id': self.vcoco_frame[idx], 'action_label': action_labels}
         return sample

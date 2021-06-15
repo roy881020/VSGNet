@@ -17,23 +17,10 @@ import random
 
 import helpers_preprocess as helpers_pre
 import pred_vis as viss
+import prior_vcoco as prior
 import proper_inferance_file as proper
 from tqdm import tqdm
-import post_test
 
-with open('../infos/directory.json') as fp: all_data_dir = json.load(fp)
-
-pd.options.display.max_columns = 50  # None -> No Restrictions
-pd.options.display.max_rows = 200  # None -> Be careful with
-
-with open(all_data_dir + "hico_infos/mask.pickle", 'rb') as fp:
-    u = pickle._Unpickler(fp)
-    u.encoding = 'latin1'
-    mask_f = u.load()
-
-    #mask_f = pickle.load(fp)
-mask_t = mask_f[0]
-count_t = mask_f[1]
 sigmoid = nn.Sigmoid()
 
 ### Fixing Seeds#######
@@ -64,7 +51,7 @@ loss_com_combine = nn.BCELoss(reduction='none')
 loss_com_single = nn.BCEWithLogitsLoss(reduction='sum')
 ##################################
 # import pdb;pdb.set_trace()
-no_of_classes = 117
+no_of_classes = 29
 
 
 ##Helper Functions##
@@ -100,13 +87,12 @@ def extend_object(inputt, extend_number):
 #############################################
 
 ############## Filtering results for preparing the output as per as v-coco###############################
-def filtering(predicted_HOI, true, persons_np, objects_np, filters, pairs_info, image_id, class_ids):
+def filtering(predicted_HOI, true, persons_np, objects_np, filters, pairs_info, image_id):
     res1 = np.zeros([1, no_of_classes])
     res2 = np.zeros([1, no_of_classes])
     res3 = np.zeros([1, no_of_classes])
     res4 = np.zeros([1, 4])
     res5 = np.zeros([1, 4])
-    res6 = np.zeros([1, 1])
     dict1 = {}
     a = 0
     increment = [int(i[0] * i[1]) for i in pairs_info]
@@ -119,21 +105,17 @@ def filtering(predicted_HOI, true, persons_np, objects_np, filters, pairs_info, 
         res3 = np.concatenate([res3, predicted_HOI[index].reshape(1, no_of_classes)], axis=0)
         res4 = np.concatenate([res4, persons_np[index].reshape(1, 4)], axis=0)
         res5 = np.concatenate([res5, objects_np[index].reshape(1, 4)], axis=0)
-        res6 = np.concatenate([res6, class_ids[index].reshape(1, 1)], axis=0)
-
         if index == start + increment[a] - 1:
             # import pdb;pdb.set_trace()
             dict1[int(image_id[a]), 'score'] = res3[1:]
             dict1[int(image_id[a]), 'pers_bbx'] = res4[1:]
             dict1[int(image_id[a]), 'obj_bbx'] = res5[1:]
-            dict1[int(image_id[a]), 'class_ids'] = res6[1:]
             res3 = np.zeros([1, no_of_classes])
             res4 = np.zeros([1, 4])
             res5 = np.zeros([1, 4])
-            res6 = np.zeros([1, 1])
             start += increment[a]
             a += 1
-    # import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
     return dict1
 
 
@@ -172,7 +154,7 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
 
     ##### Freeing out the cache memories from gpus and declaring the phases######
     torch.cuda.empty_cache()
-    phases = ['train', 'test']
+    phases = ['train', 'val', 'test']
 
     if infr == 't' and visualize == 'f':  ### If running from a pretrained model only for saving best result ######
         start_epoch = start_epoch - 1
@@ -202,17 +184,20 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
         for phase in phases:
             if phase == 'train':
                 model.train()
+            elif phase == 'val':
+                model.train()
             else:
                 model.eval()
 
             print('In {}'.format(phase))
-            detections_train = {}
-            detections_test = {}
+            detections_train = []
+            detections_val = []
+            detections_test = []
 
             true_scores_class = np.ones([1, 80], dtype=int)
-            true_scores = np.ones([1, no_of_classes], dtype=int)
+            true_scores = np.ones([1, 29], dtype=int)
             true_scores_single = np.ones([1, 1], dtype=int)
-            predicted_scores = np.ones([1, no_of_classes], dtype=float)
+            predicted_scores = np.ones([1, 29], dtype=float)
             predicted_scores_single = np.ones([1, 1], dtype=float)
             predicted_scores_class = np.ones([1, 80], dtype=float)
             acc_epoch = 0
@@ -234,6 +219,8 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                 optimizer.zero_grad()
                 if phase == 'train':
                     nav = torch.tensor([[0, epoch]] * minbatch_size).to(device)
+                elif phase == 'val':
+                    nav = torch.tensor([[1, epoch]] * minbatch_size).to(device)
                 else:
                     nav = torch.tensor([[2, epoch]] * minbatch_size).to(device)
 
@@ -243,16 +230,19 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
 
                 with torch.set_grad_enabled(phase == 'train' or phase == 'val'):
                     model_out = model(inputs, pairs_info, pairs_info, image_id, nav, phase)
-                    outputs = model_out[0]
-                    outputs_single = model_out[1]
-                    outputs_combine = model_out[2]
-                    outputs_gem = model_out[3]
+                    outputs = model_out[0] # lin_visual
+                    outputs_single = model_out[1] # lin_single
+                    #outputs_combine = model_out[2] # lin_graph
+                    outputs_gem = model_out[2] # lin_att
+                    # outputs_pose=model_out[7]
+                    #import pdb; pdb.set_trace()
 
                     predicted_HOI = sigmoid(outputs).data.cpu().numpy()
-                    predicted_HOI_combine = sigmoid(outputs_combine).data.cpu().numpy()
+                    #predicted_HOI_combine = sigmoid(outputs_combine).data.cpu().numpy()
                     predicted_single = sigmoid(outputs_single).data.cpu().numpy()
                     predicted_gem = sigmoid(outputs_gem).data.cpu().numpy()
                     predicted_HOI_pair = predicted_HOI
+                    # predicted_HOI_pose=sigmoid(outputs_pose).data.cpu().numpy()
 
                     start_index = 0
                     start_obj = 0
@@ -309,21 +299,35 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                     objects_score_extended = LIS(objects_score_extended, 8.3, 12, 10)
                     ##################################
 
-                    predicted_HOI = predicted_HOI * predicted_HOI_combine * predicted_single * predicted_gem * objects_score_extended[
-                                                                                                               1:] * persons_score_extended[
-                                                                                                                     1:]
-
-                    index_mask = class_ids_extended[1:].reshape(len(class_ids_extended[1:]), ).astype('int32')
-                    loss_mask, count_weight = mask_t[index_mask], count_t[index_mask]
+                    ##### Multiplying the score from different streams along with the prior function from ican##########
+                    # predicted_HOI = predicted_HOI * predicted_HOI_combine * predicted_single * predicted_gem * objects_score_extended[
+                    #                                                                                            1:] * persons_score_extended[
+                    #                                                                                                  1:]
+                    loss_mask = prior.apply_prior(class_ids_extended[1:], predicted_HOI)
+                    import pdb; pdb.set_trace()
                     predicted_HOI = loss_mask * predicted_HOI
 
                     #### Calculating Loss############
-                    N_b = minbatch_size * no_of_classes  # *int(total_elements[0])#*no_of_classes #pairs_info[1]*pairs_info[2]*pairs_info[3]
+                    N_b = minbatch_size * 29  # *int(total_elements[0])#*29 #pairs_info[1]*pairs_info[2]*pairs_info[3]
                     hum_obj_mask = torch.Tensor(
                         objects_score_extended[1:] * persons_score_extended[1:] * loss_mask).cuda()
+                    # lossf = torch.sum(loss_com_combine(
+                    #     sigmoid(outputs) * sigmoid(outputs_combine) * sigmoid(outputs_single) * hum_obj_mask * sigmoid(
+                    #         outputs_gem), labels.float())) / N_b
+                    # baseline_test1 -> only visual feature
+                    #lossf = torch.sum(loss_com_combine(sigmoid(outputs) * hum_obj_mask, labels.float())) / N_b
+
+                    # baseline_test2 -> only graph feature
+                    # lossf = torch.sum(loss_com_combine(sigmoid(outputs_combine), labels.float())) / N_b
+
+                    # baseline_test3 -> visual + graph
+                    #lossf = torch.sum(loss_com_combine(sigmoid(outputs) * sigmoid(outputs_combine) * hum_obj_mask, labels.float())) / N_b
+
+                    # baseline_test4 -> edit model_baseline.py to remove other process except visual features
                     lossf = torch.sum(loss_com_combine(
-                        sigmoid(outputs) * sigmoid(outputs_combine) * sigmoid(outputs_single) * hum_obj_mask * sigmoid(
+                        sigmoid(outputs) * sigmoid(outputs_single) * hum_obj_mask * sigmoid(
                             outputs_gem), labels.float())) / N_b
+
                     lossc = lossf.item()
 
                     acc_epoch += lossc
@@ -357,7 +361,7 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                 if phase == 'test':
                     if (epoch + 1) % saving_epoch == 0 or infr == 't':
                         all_scores = filtering(predicted_HOI, true, persons_np_extended[1:], objects_np_extended[1:],
-                                               predicted_single, pairs_info, image_id, class_ids_extended[1:])
+                                               predicted_single, pairs_info, image_id)
                         # prep.infer_format(image_id,all_scores,phase,detections_test,pairs_info)
                         proper.infer_format(image_id, all_scores, phase, detections_test, pairs_info)
                 ######################################################
@@ -374,6 +378,12 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                 AP_train = pd.DataFrame(AP, columns=['Name_TRAIN', 'Score_TRAIN'])
                 AP_train_single = pd.DataFrame(AP_single, columns=['Name_TRAIN', 'Score_TRAIN'])
 
+            elif phase == 'val':
+                loss_epoch_val.append((acc_epoch))
+                AP, AP_single = ap.class_AP(predicted_scores[1:, :], true_scores[1:, :], predicted_scores_single[1:, ],
+                                            true_scores_single[1:, ])
+                AP_val = pd.DataFrame(AP, columns=['Name_VAL', 'Score_VAL'])
+                AP_val_single = pd.DataFrame(AP_single, columns=['Name_VAL', 'Score_VAL'])
 
             elif phase == 'test':
                 loss_epoch_test.append((acc_epoch))
@@ -382,12 +392,12 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                 AP_test = pd.DataFrame(AP, columns=['Name_TEST', 'Score_TEST'])
                 AP_test_single = pd.DataFrame(AP_single, columns=['Name_TEST', 'Score_TEST'])
                 if (epoch + 1) % saving_epoch == 0 or infr == 't':
-                    file_name_p = folder_name + '/' + 'test.pickle'.format(epoch + 1)
+                    file_name_p = folder_name + '/' + 'test{}.pickle'.format(epoch + 1)
                     with open(file_name_p, 'wb') as handle:
                         pickle.dump(detections_test, handle)
 
         ###### Saving the Model###########
-        mean = AP_test.to_records(index=False)[no_of_classes][1]
+        mean = AP_test.to_records(index=False)[29][1]
         ####Best Model######
         if mean > mean_best and infr != 't':
             mean_best = mean
@@ -416,8 +426,8 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
             AP_final_single = pd.concat([AP_test_single], axis=1)
             result.append(AP_final)
         else:
-            AP_final = pd.concat([AP_train, AP_test], axis=1)
-            AP_final_single = pd.concat([AP_train_single, AP_test_single], axis=1)
+            AP_final = pd.concat([AP_train, AP_val, AP_test], axis=1)
+            AP_final_single = pd.concat([AP_train_single, AP_val_single, AP_test_single], axis=1)
             ##### This file will store each epoch result in a pickle format####
             with open(file_name, 'wb') as handle:
                 pickle.dump(result, handle)
@@ -425,12 +435,10 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
         print('APs in EPOCH:{}'.format(epoch + 1))
         print(AP_final)
         print(AP_final_single)
-        #post_test.send_message_to_slack_baseline(AP_final)
         try:
-            print('Loss_train:{},Loss_test:{}'.format(loss_epoch_train[epoch - start_epoch],
-                                                      loss_epoch_test[epoch - start_epoch]))
-            #post_test.send_message_to_slack('Loss_train:{},Loss_test:{}'.format(loss_epoch_train[epoch - start_epoch],
-#                                                      loss_epoch_test[epoch - start_epoch]))
+            print('Loss_train:{},Loss_validation:{},Loss_test:{}'.format(loss_epoch_train[epoch - start_epoch],
+                                                                         loss_epoch_val[epoch - start_epoch],
+                                                                         loss_epoch_test[epoch - start_epoch]))
         except:
             print('Loss_test:{}'.format(loss_epoch_test[epoch - start_epoch]))
 
@@ -443,4 +451,3 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
     print('The whole process runs for {:.0f}h {:.0f}m {:0f}s'.format(time_elapsed // 3600, (time_elapsed % 3600) // 60,
                                                                      ((time_elapsed % 3600) % 60) % 60))
     return
-

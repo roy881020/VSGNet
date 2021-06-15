@@ -57,4 +57,3 @@ with open(file_name, 'rb') as handle:
 print(len(b))
 vcocoeval._do_eval(b, ovr_thresh=0.5)
 #print(b[1]['person_box'])
-

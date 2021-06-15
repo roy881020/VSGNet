@@ -26,9 +26,9 @@ class Flatten(nn.Module):
         return x.view(x.size()[0], -1)
 
 
-class VSGNet(nn.Module):
+class baseline(nn.Module):
     def __init__(self):
-        super(VSGNet, self).__init__()
+        super(baseline, self).__init__()
 
         model = models.resnet152(pretrained=True)
         self.flat = Flatten()
@@ -215,87 +215,87 @@ class VSGNet(nn.Module):
         interaction_prob = self.sigmoid(lin_single)
         ####################################################
 
-        ####### Graph Model Base Structure##################
-        people_t = people
-        objects_only = objects_only
-        combine_g = []
-        people_f = []
-        objects_f = []
-        pairs_f = []
-        start_p = 0
-        start_o = 0
-        start_c = 0
-        for batch_num, l in enumerate(pairs_info):
+        # ####### Graph Model Base Structure##################
+        # people_t = people
+        # objects_only = objects_only
+        # combine_g = []
+        # people_f = []
+        # objects_f = []
+        # pairs_f = []
+        # start_p = 0
+        # start_o = 0
+        # start_c = 0
+        # for batch_num, l in enumerate(pairs_info):
+        #
+        #     ####Slicing##########
+        #     people_this_batch = people_t[start_p:start_p + int(l[0])]
+        #     no_peo = len(people_this_batch)
+        #     objects_this_batch = objects_only[start_o:start_o + int(l[1])][1:]
+        #     no_objects_this_batch = objects_only[start_o:start_o + int(l[1])][0]
+        #     no_obj = len(objects_this_batch)
+        #     interaction_prob_this_batch = interaction_prob[start_c:start_c + int(l[1]) * int(l[0])]
+        #     if no_obj == 0:
+        #
+        #         people_this_batch_r = people_this_batch
+        #
+        #         objects_this_batch_r = no_objects_this_batch.view([1, 1024])
+        #     else:
+        #         peo_to_obj_this_batch = torch.stack(
+        #             [torch.cat((i, j)) for ind_p, i in enumerate(people_this_batch) for ind_o, j in
+        #              enumerate(objects_this_batch)])
+        #         obj_to_peo_this_batch = torch.stack(
+        #             [torch.cat((i, j)) for ind_p, i in enumerate(objects_this_batch) for ind_o, j in
+        #              enumerate(people_this_batch)])
+        #         ###################
+        #
+        #         ####### Adjecency###########
+        #         adj_l = []
+        #         adj_po = torch.zeros([no_peo, no_obj]).cuda()
+        #         adj_op = torch.zeros([no_obj, no_peo]).cuda()
+        #
+        #         for index_probs, probs in enumerate(interaction_prob_this_batch):
+        #             if index_probs % (no_obj + 1) != 0:
+        #                 adj_l.append(probs)
+        #
+        #
+        #
+        #         adj_po = torch.cat(adj_l).view(len(adj_l), 1)
+        #         adj_op = adj_po
+        #
+        #         ##############################
+        #
+        #         ###Finding Out Refined Features######
+        #
+        #         people_this_batch_r = people_this_batch + torch.mm(adj_po.view([no_peo, no_obj]),
+        #                                                            self.peo_to_obj_w(objects_this_batch))
+        #
+        #         objects_this_batch_r = objects_this_batch + torch.mm(adj_op.view([no_peo, no_obj]).t(),
+        #                                                              self.obj_to_peo_w(people_this_batch))
+        #         objects_this_batch_r = torch.cat((no_objects_this_batch.view([1, 1024]), objects_this_batch_r))
+        #     #############################
+        #
+        #     #### Restructuring ####
+        #     people_f.append(people_this_batch_r)
+        #     people_t_f = people_this_batch_r
+        #     objects_f.append(objects_this_batch_r)
+        #     objects_t_f = objects_this_batch_r
+        #
+        #     pairs_f.append(torch.stack(
+        #         [torch.cat((i, j)) for ind_p, i in enumerate(people_t_f) for ind_o, j in enumerate(objects_t_f)]))
+        #
+        #     # import pdb;pdb.set_trace()
+        #     ##############################
 
-            ####Slicing##########
-            people_this_batch = people_t[start_p:start_p + int(l[0])]
-            no_peo = len(people_this_batch)
-            objects_this_batch = objects_only[start_o:start_o + int(l[1])][1:]
-            no_objects_this_batch = objects_only[start_o:start_o + int(l[1])][0]
-            no_obj = len(objects_this_batch)
-            interaction_prob_this_batch = interaction_prob[start_c:start_c + int(l[1]) * int(l[0])]
-            if no_obj == 0:
-
-                people_this_batch_r = people_this_batch
-
-                objects_this_batch_r = no_objects_this_batch.view([1, 1024])
-            else:
-                peo_to_obj_this_batch = torch.stack(
-                    [torch.cat((i, j)) for ind_p, i in enumerate(people_this_batch) for ind_o, j in
-                     enumerate(objects_this_batch)])
-                obj_to_peo_this_batch = torch.stack(
-                    [torch.cat((i, j)) for ind_p, i in enumerate(objects_this_batch) for ind_o, j in
-                     enumerate(people_this_batch)])
-                ###################
-
-                ####### Adjecency###########
-                adj_l = []
-                adj_po = torch.zeros([no_peo, no_obj]).cuda()
-                adj_op = torch.zeros([no_obj, no_peo]).cuda()
-
-                for index_probs, probs in enumerate(interaction_prob_this_batch):
-                    if index_probs % (no_obj + 1) != 0:
-                        adj_l.append(probs)
-
-
-
-                adj_po = torch.cat(adj_l).view(len(adj_l), 1)
-                adj_op = adj_po
-
-                ##############################
-
-                ###Finding Out Refined Features######
-
-                people_this_batch_r = people_this_batch + torch.mm(adj_po.view([no_peo, no_obj]),
-                                                                   self.peo_to_obj_w(objects_this_batch))
-
-                objects_this_batch_r = objects_this_batch + torch.mm(adj_op.view([no_peo, no_obj]).t(),
-                                                                     self.obj_to_peo_w(people_this_batch))
-                objects_this_batch_r = torch.cat((no_objects_this_batch.view([1, 1024]), objects_this_batch_r))
-            #############################
-
-            #### Restructuring ####
-            people_f.append(people_this_batch_r)
-            people_t_f = people_this_batch_r
-            objects_f.append(objects_this_batch_r)
-            objects_t_f = objects_this_batch_r
-
-            pairs_f.append(torch.stack(
-                [torch.cat((i, j)) for ind_p, i in enumerate(people_t_f) for ind_o, j in enumerate(objects_t_f)]))
-
-            # import pdb;pdb.set_trace()
-            ##############################
-
-            ###Loop increment for next batch##
-            start_p += int(l[0])
-            start_o += int(l[1])
-            start_c += int(l[0]) * int(l[1])
-        #####################
-
-        people_graph = torch.cat(people_f)
-        objects_graph = torch.cat(objects_f)
-        pairs_graph = torch.cat(pairs_f)
-        ######################################################################################################################################
+        #     ###Loop increment for next batch##
+        #     start_p += int(l[0])
+        #     start_o += int(l[1])
+        #     start_c += int(l[0]) * int(l[1])
+        # #####################
+        #
+        # people_graph = torch.cat(people_f)
+        # objects_graph = torch.cat(objects_f)
+        # pairs_graph = torch.cat(pairs_f)
+        # ######################################################################################################################################
 
         #### Prediction from visual features####
         lin_h = self.lin_visual_head(pairs)
@@ -303,11 +303,11 @@ class VSGNet(nn.Module):
         lin_visual = self.lin_visual_tail(lin_t)
         ##############################
 
-        #### Prediction from graph features####
-
-        lin_graph_h = self.lin_graph_head(pairs_graph)
-        lin_graph_t = lin_graph_h * out2_union
-        lin_graph = self.lin_graph_tail(lin_graph_t)
+        # #### Prediction from graph features####
+        #
+        # lin_graph_h = self.lin_graph_head(pairs_graph)
+        # lin_graph_t = lin_graph_h * out2_union
+        # lin_graph = self.lin_graph_tail(lin_graph_t)
 
         ####################################
 
@@ -316,4 +316,4 @@ class VSGNet(nn.Module):
         #############################
         #import pdb; pdb.set_trace()
 
-        return [lin_visual, lin_single, lin_graph, lin_att]  # ,lin_obj_ids]
+        return [lin_visual, lin_single, lin_att]  # ,lin_obj_ids]

@@ -20,7 +20,6 @@ import pred_vis as viss
 import prior_vcoco as prior
 import proper_inferance_file as proper
 from tqdm import tqdm
-import pdb
 
 sigmoid = nn.Sigmoid()
 
@@ -116,7 +115,7 @@ def filtering(predicted_HOI, true, persons_np, objects_np, filters, pairs_info, 
             res5 = np.zeros([1, 4])
             start += increment[a]
             a += 1
-    # import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
     return dict1
 
 
@@ -215,11 +214,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                 labels_single = i[2].to(device)
                 image_id = i[3]
                 pairs_info = i[4]
-                #print("what the pairs_info???", i[3])
-                for iter in range(len(i[3])):
-                    if i[3][iter] == 3770:
-                        #pdb.set_trace()
-                        pass
                 minbatch_size = len(pairs_info)
 
                 optimizer.zero_grad()
@@ -233,19 +227,14 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                 # import pdb;pdb.set_trace()
                 true = (labels.data).cpu().numpy()
                 true_single = (labels_single.data).cpu().numpy()
-                #pdb.set_trace()
 
                 with torch.set_grad_enabled(phase == 'train' or phase == 'val'):
-
                     model_out = model(inputs, pairs_info, pairs_info, image_id, nav, phase)
                     outputs = model_out[0]
                     outputs_single = model_out[1]
                     outputs_combine = model_out[2]
                     outputs_gem = model_out[3]
                     # outputs_pose=model_out[7]
-                    # import pdb;pdb.set_trace()
-
-
 
                     predicted_HOI = sigmoid(outputs).data.cpu().numpy()
                     predicted_HOI_combine = sigmoid(outputs_combine).data.cpu().numpy()
@@ -284,7 +273,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                                                                                           scores_total['objects_bbx'], \
                                                                                           scores_total[
                                                                                               'class_id_objects']
-
                         temp_scores = extend(np.array(persons_score).reshape(len(persons_score), 1),
                                              int(pairs_info[batch][1]))
                         persons_score_extended = np.concatenate([persons_score_extended, temp_scores])
@@ -315,7 +303,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                                                                                                                1:] * persons_score_extended[
                                                                                                                      1:]
                     loss_mask = prior.apply_prior(class_ids_extended[1:], predicted_HOI)
-                    pdb.set_trace()
                     predicted_HOI = loss_mask * predicted_HOI
 
                     #### Calculating Loss############
@@ -325,8 +312,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                     lossf = torch.sum(loss_com_combine(
                         sigmoid(outputs) * sigmoid(outputs_combine) * sigmoid(outputs_single) * hum_obj_mask * sigmoid(
                             outputs_gem), labels.float())) / N_b
-
-
                     lossc = lossf.item()
 
                     acc_epoch += lossc
@@ -341,7 +326,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                     del inputs
                     del outputs
                     del labels
-                    #pdb.set_trace()
                 ####### If we want to do Visualization#########
                 if visualize != 'f':
                     viss.visual(image_id, phase, pairs_info, predicted_HOI, predicted_single,
@@ -362,8 +346,6 @@ def train_test(model, optimizer, scheduler, dataloader, number_of_epochs, break_
                     if (epoch + 1) % saving_epoch == 0 or infr == 't':
                         all_scores = filtering(predicted_HOI, true, persons_np_extended[1:], objects_np_extended[1:],
                                                predicted_single, pairs_info, image_id)
-                        # import pdb
-                        # pdb.set_trace()
                         # prep.infer_format(image_id,all_scores,phase,detections_test,pairs_info)
                         proper.infer_format(image_id, all_scores, phase, detections_test, pairs_info)
                 ######################################################
