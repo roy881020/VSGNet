@@ -40,9 +40,10 @@ for i in range(len(os.listdir(OBJ_PATH_train_s))):
         q4_tmp['box_coords'][3] = q4_tmp['box_coords'][3] + origin_w
 
 
-        origin_detections.append(q2_tmp)
-        origin_detections.append(q3_tmp)
-        origin_detections.append(q4_tmp)
+        origin_annotation['detections'].append(q2_tmp)
+        origin_annotation['detections'].append(q3_tmp)
+        origin_annotation['detections'].append(q4_tmp)
+
 
     with open(all_data_dir + 'Object_Detections_hico/train/' + origin_filename.split('.')[0] + '.json', 'w') as write_json:
         json.dump(origin_detections, write_json)
