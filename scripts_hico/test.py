@@ -9,8 +9,14 @@ OBJ_PATH_test_s = all_data_dir + 'Object_Detections_hico/test/'
 
 
 for i in range(len(os.listdir(OBJ_PATH_train_s))):
-    with open(OBJ_PATH_train_s + os.listdir(OBJ_PATH_train_s)[i]) as fp:
-        origin_annotation = json.load(fp)
+
+
+    try:
+        with open(OBJ_PATH_train_s + os.listdir(OBJ_PATH_train_s)[i]) as fp:
+            origin_annotation = json.load(fp)
+
+    except Exception as ex:
+        import pdb; pdb.set_trace()
 
     origin_h = origin_annotation['H']
     origin_w = origin_annotation['W']
