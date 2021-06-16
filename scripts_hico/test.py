@@ -54,6 +54,7 @@ for i in range(len(os.listdir(OBJ_PATH_train_s))):
     origin_annotation['W'] = origin_annotation['W'] * 2
 
         #check H, W multipy 2
+    print("{} 'th annotation saved".format(i))
 
 
     with open(all_data_dir + 'Object_Detections_hico/train_quattro/' + origin_filename.split('.')[0] + '.json', 'w') as write_json:
