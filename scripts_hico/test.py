@@ -4,7 +4,7 @@ import copy
 
 with open('../infos/directory.json') as fp: all_data_dir = json.load(fp)
 
-OBJ_PATH_train_s = all_data_dir + 'Object_Detections_hico/train/'
+OBJ_PATH_train_s = all_data_dir + 'Object_Detections_hico_orig/train/'
 OBJ_PATH_test_s = all_data_dir + 'Object_Detections_hico/test/'
 
 
@@ -57,7 +57,7 @@ for i in range(len(os.listdir(OBJ_PATH_train_s))):
     print("{} 'th annotation saved".format(i))
 
 
-    with open(all_data_dir + 'Object_Detections_hico/train_quattro/' + origin_filename.split('.')[0] + '.json', 'w') as write_json:
+    with open(all_data_dir + 'Object_Detections_hico/train/' + origin_filename.split('.')[0] + '.json', 'w') as write_json:
         json.dump(origin_annotation, write_json)
 
 
