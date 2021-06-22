@@ -66,6 +66,11 @@ class VSGNet(nn.Module):
 
         ###############################################################################################
 
+        ###for large image
+        self.large_to_half = nn.Sequential(
+
+        )
+
         ##### Attention Feature Model######
         self.conv_sp_map = nn.Sequential(
             nn.Conv2d(2, 64, kernel_size=(5, 5)),
@@ -169,7 +174,7 @@ class VSGNet(nn.Module):
         #import pdb; pdb.set_trace()
 
         rois_people, rois_objects, spatial_locs, union_box = ROI.get_pool_loc(out1, image_id, flag_, size=pool_size,
-                                                                              spatial_scale=25,
+                                                                              spatial_scale=50,
                                                                               batch_size=len(pairs_info))
 
         ### Defining The Pooling Operations #######
@@ -184,7 +189,6 @@ class VSGNet(nn.Module):
         res_people = self.Conv_people(rois_people) + residual_people
         res_av_people = hum_pool(res_people)
         out2_people = self.flat(res_av_people)
-        #pdb.set_trace()
         ###########
 
         ##Objects##
